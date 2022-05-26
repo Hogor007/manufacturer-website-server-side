@@ -253,7 +253,7 @@ const run = async () => {
         }
       }
     );
-
+    // Adding another comment to push in heroku hehe
     //API to get 1 admin
     app.get("/admin/:email", verifyJWT, async (req, res) => {
       const decodedEmail = req.decoded.email;
