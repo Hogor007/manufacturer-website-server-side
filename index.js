@@ -48,6 +48,25 @@ const run = async () => {
     const blogsCollection = db.collection("blogsCollection");
     const adminsCollection = db.collection("adminsCollection");
 
+    //API to update a tool
+    app.put("/product/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const id = req.params.id;
+        const product = req.body;
+        console.log("product", product);
+        const options = { upsert: true };
+        const result = await toolsCollection.updateOne(
+          { _id: ObjectId(id) },
+          { $set: product },
+          options
+        );
+        res.send(result);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
 
     //API to get all orders
     app.get("/orders", verifyJWT, verifyAdmin, async (req, res) => {
