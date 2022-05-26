@@ -48,6 +48,250 @@ const run = async () => {
     const blogsCollection = db.collection("blogsCollection");
     const adminsCollection = db.collection("adminsCollection");
 
+    //Verify Admin Role
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const requesterAccount = await adminsCollection.findOne({
+        email: requester,
+      });
+      if (requesterAccount.role === "admin") {
+        next();
+      } else {
+        res.status(403).send({ message: "Forbidden" });
+      }
+    };
+
+    //API to get all reviews
+    app.get("/reviews", async (req, res) => {
+      const reviews = await reviewsCollection.find({}).toArray();
+      res.send(reviews);
+    });
+
+    //API to post a review
+    app.post("/review", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+
+      if (email === decodedEmail) {
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API for payment
+    app.post("/create-payment-intent", async (req, res) => {
+      const { totalPrice } = req.body;
+      const amount = parseInt(totalPrice) * 100;
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    //API to get blogs
+
+    app.get("/blogs", async (req, res) => {
+      const query = {};
+      const blogs = await blogsCollection.find(query).toArray();
+      res.send(blogs);
+    });
+
+    // API to Run Server
+    app.get("/", async (req, res) => {
+      res.send("Manufacturer Server Running");
+    });
+
+    //Authentication API
+    app.post("/login", async (req, res) => {
+      const user = req.body;
+      const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1d",
+      });
+      res.send({ accessToken });
+    });
+
+    //API to get all users
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const users = await usersCollection.find({}).toArray();
+        res.send(users);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API to get single user   
+    app.get("/user/:email", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const email = req.params.email;
+        const user = await usersCollection.findOne({ email: email });
+        res.send(user);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API to post a user
+    app.put("/user/:email", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const email = req.params.email;
+        const user = req.body;
+        console.log("user", user);
+        const query = {
+          email: email,
+        };
+        const options = {
+          upsert: true,
+        };
+        const updatedDoc = {
+          $set: {
+            email: user?.email,
+            role: user?.role,
+          },
+        };
+        const result = await usersCollection.updateOne(
+          query,
+          updatedDoc,
+          options
+        );
+        res.send(result);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+    //API to update a user
+    app.put("/update/user/:email", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const email = req.params.email;
+        const user = req.body;
+        console.log("user", user);
+        const query = {
+          email: email,
+        };
+        const options = {
+          upsert: true,
+        };
+        const updatedDoc = {
+          $set: {
+            displayName: user?.displayName,
+            institution: user?.institution,
+            phoneNumber: user?.phoneNumber,
+            address: user?.address,
+            dateOfBirth: user?.dateOfBirth,
+          },
+        };
+        const result = await usersCollection.updateOne(
+          query,
+          updatedDoc,
+          options
+        );
+        res.send(result);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API to make Admin
+    app.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const email = req.params.email;
+        console.log("email", email);
+        const filter = { email: email };
+        const options = { upsert: true };
+        const updateDoc = {
+          $set: {
+            email: email,
+            role: "admin",
+          },
+        };
+        const result = await adminsCollection.updateOne(
+          filter,
+          updateDoc,
+          options
+        );
+        res.send(result);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API to remove admin
+    app.delete(
+      "/user/admin/:email",
+      verifyJWT,
+      verifyAdmin,
+      async (req, res) => {
+        const decodedEmail = req.decoded.email;
+        const email = req.headers.email;
+        if (email === decodedEmail) {
+          const email = req.params.email;
+          const filter = { email: email };
+          const result = await adminsCollection.deleteOne(filter);
+          res.send(result);
+        } else {
+          res.send("Unauthorized access");
+        }
+      }
+    );
+
+    //API to get 1 admin
+    app.get("/admin/:email", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const email = req.params.email;
+        const user = await adminsCollection.findOne({ email: email });
+        res.send(user);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API to verify 1 admin
+    app.get("/verify/admin/:email", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const email = req.params.email;
+        const user = await adminsCollection.findOne({ email: email });
+        const isAdmin = user?.role === "admin";
+        res.send({ admin: isAdmin });
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API to get all admin
+    app.get("/admin", verifyJWT, verifyAdmin, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const admins = await adminsCollection.find({}).toArray();
+        res.send(admins);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
 
     //API to get all tools
     app.get("/tools", async (req, res) => {
