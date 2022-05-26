@@ -49,6 +49,41 @@ const run = async () => {
     const adminsCollection = db.collection("adminsCollection");
 
 
+    //API to get all orders
+    app.get("/orders", verifyJWT, verifyAdmin, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const orders = await ordersCollection.find({}).toArray();
+        res.send(orders);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
+    //API to update a order
+    app.put("/orders/:id", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const orderId = req.params.id;
+        const order = req.body;
+        console.log("order", order);
+        const query = { _id: ObjectId(orderId) };
+        const options = { upsert: true };
+        const updatedOrder = await ordersCollection.updateOne(
+          query,
+          {
+            $set: order,
+          },
+          options
+        );
+        res.send(updatedOrder);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
     //API to get orders by user email
     app.get("/orders/:email", verifyJWT, async (req, res) => {
       const decodedEmail = req.decoded.email;
