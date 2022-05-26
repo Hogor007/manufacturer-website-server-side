@@ -49,6 +49,11 @@ const run = async () => {
     const adminsCollection = db.collection("adminsCollection");
 
 
+    //API to get all tools
+    app.get("/tools", async (req, res) => {
+      const tools = await toolsCollection.find({}).toArray();
+      res.send(tools);
+    });
 
     //API to get single tools
     app.get("/tools/:id", verifyJWT, async (req, res) => {
