@@ -48,6 +48,21 @@ const run = async () => {
     const blogsCollection = db.collection("blogsCollection");
     const adminsCollection = db.collection("adminsCollection");
 
+
+
+    //API to get single tools
+    app.get("/tools/:id", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.headers.email;
+      if (email === decodedEmail) {
+        const id = req.params.id;
+        const tool = await toolsCollection.findOne({ _id: ObjectId(id) });
+        res.send(tool);
+      } else {
+        res.send("Unauthorized access");
+      }
+    });
+
     //API to post a tool
     app.post("/product", verifyJWT, verifyAdmin, async (req, res) => {
       const decodedEmail = req.decoded.email;
